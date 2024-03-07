@@ -5,7 +5,9 @@
 
     @include('prob-notice')
 
-
+    @php
+        //dd($percentageArray)
+    @endphp
     <div class="container">
         <div class="row">
             <div class="col-md-12">
@@ -80,11 +82,11 @@
         <div class="row">
             <div class="col-md-6">
                 <h2>Probability Settings</h2>
-                <canvas id="probabilityChart"></canvas>
+                <div id="chart_div"></div>
             </div>
             <div class="col-md-6">
                 <h2>Actual Rewards</h2>
-                <canvas id="awardedChart"></canvas>
+                <div id="actual_chart_div"></div>
             </div>
         </div>
     </div>
@@ -98,5 +100,88 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
+    <script type="text/javascript">
+        // Load the Visualization API and the corechart package.
+        google.charts.load('current', {
+            'packages': ['corechart']
+        });
 
+        // Set a callback to run when the Google Visualization API is loaded.
+        google.charts.setOnLoadCallback(drawChart);
+
+        // Callback that creates and populates a data table,
+        // instantiates the pie chart, passes in the data and
+        // draws it.
+        function drawChart() {
+
+            // Create the data table.
+            var data = new google.visualization.DataTable();
+            data.addColumn('string', 'Product');
+            data.addColumn('number', 'Probability');
+
+            // Replace the sample data with the data from your controller
+            var dynamicData = [
+                @foreach ($prizes as $prize)
+                    ['{{ $prize->title }}', {{ $prize->probability }}],
+                @endforeach
+            ];
+
+            data.addRows(dynamicData);
+
+            // Set chart options
+            var options = {
+                'title': 'How Much Pizza I Ate Last Night',
+                'width': 400,
+                'height': 300
+            };
+
+            // Instantiate and draw our chart, passing in some options.
+            var chart = new google.visualization.PieChart(document.getElementById('chart_div'));
+            chart.draw(data, options);
+        }
+    </script>
+
+
+    <script type="text/javascript">
+        // Load the Visualization API and the corechart package.
+        google.charts.load('current', {
+            'packages': ['corechart']
+        });
+
+        // Set a callback to run when the Google Visualization API is loaded.
+        google.charts.setOnLoadCallback(drawChart);
+
+        // Callback that creates and populates a data table,
+        // instantiates the pie chart, passes in the data and
+        // draws it.
+        function drawChart() {
+
+            // Create the data table.
+            var data = new google.visualization.DataTable();
+            data.addColumn('string', 'Product');
+            data.addColumn('number', 'Probability');
+
+            // Replace the sample data with the data from your controller
+            var dynamicData = [
+                @if (isset($percentageArray))
+                    @foreach ($percentageArray as $product => $percentage)
+                        ['{{ $product }}', {{ $percentage }}],
+                    @endforeach
+                @endif
+            ];
+
+            data.addRows(dynamicData);
+
+            // Set chart options
+            var options = {
+                'title': 'How Much Pizza I Ate Last Night',
+                'width': 400,
+                'height': 300
+            };
+
+            // Instantiate and draw our chart, passing in some options.
+            var chart = new google.visualization.PieChart(document.getElementById('actual_chart_div'));
+            chart.draw(data, options);
+        }
+    </script>
 @endpush
