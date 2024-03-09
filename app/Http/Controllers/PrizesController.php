@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Prize;
 use App\Http\Requests\PrizeRequest;
 use Illuminate\Http\Request;
-
+use Illuminate\Validation\ValidationException;
 
 
 class PrizesController extends Controller
@@ -15,7 +15,7 @@ class PrizesController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Contracts\View\View
+   * @return \Illuminate\Contracts\View\View
      */
     public function index()
     {
@@ -30,8 +30,9 @@ class PrizesController extends Controller
      * @return \Illuminate\Contracts\View\View
      */
     public function create()
-    {
+    {  
         return view('prizes.create');
+        $this->validateProbabilitySum($request->input('probability'));
     }
 
     /**
@@ -42,12 +43,14 @@ class PrizesController extends Controller
      */
     public function store(PrizeRequest $request)
     {
+        $this->validateProbabilitySum($request->input('probability'));
+
         $prize = new Prize;
         $prize->title = $request->input('title');
         $prize->probability = floatval($request->input('probability'));
         $prize->save();
 
-        return to_route('prizes.index');
+        return redirect()->route('prizes.index');
     }
 
 
@@ -74,11 +77,13 @@ class PrizesController extends Controller
     public function update(PrizeRequest $request, $id)
     {
         $prize = Prize::findOrFail($id);
+        $this->validateProbabilitySum($request->input('probability'), $id);
+    
         $prize->title = $request->input('title');
         $prize->probability = floatval($request->input('probability'));
         $prize->save();
-
-        return to_route('prizes.index');
+    
+        return redirect()->route('prizes.index');
     }
 
     /**
@@ -99,17 +104,43 @@ class PrizesController extends Controller
     public function simulate(Request $request)
     {
 
+        $numSimulations = $request->number_of_prizes ?? 10;
 
-        for ($i = 0; $i < $request->number_of_prizes ?? 10; $i++) {
-            Prize::nextPrize();
+        $prizes = Prize::all();
+
+        for ($i = 0; $i < $numSimulations; $i++) {
+            $selectedPrize = $this->selectPrize($prizes);
+            $selectedPrize->increment('winner_count');
         }
 
-        return to_route('prizes.index');
+        return redirect()->route('prizes.index');
     }
 
+   
     public function reset()
     {
-        // TODO : Write logic here
-        return to_route('prizes.index');
+        Prize::query()->update(['winner_count' => 0]);
+
+        return redirect()->route('prizes.index');
+    }
+
+  
+    private function selectPrize($prizes)
+    {
+        $probabilities = $prizes->pluck('probability')->toArray();
+        $selectedPrizeIndex = array_rand($probabilities);
+
+        return $prizes[$selectedPrizeIndex];
+    }
+
+    private function validateProbabilitySum($newProbability, $prizeId = null)
+    {
+        $currentSum = Prize::where('id', '!=', $prizeId)->sum('probability');
+        $remainingProbability = 100 - $currentSum;
+        $newSum = $currentSum + floatval($newProbability);
+    
+        if ($newSum > 100) {
+            throw ValidationException::withMessages(['probability' => "The sum of probabilities cannot exceed 100%. Remaining probability: {$remainingProbability}%."]);
+        }
     }
 }
