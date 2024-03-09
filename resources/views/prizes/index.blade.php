@@ -4,7 +4,7 @@
 
 
     @include('prob-notice')
-
+    
 
     <div class="container">
         <div class="row">
@@ -29,7 +29,7 @@
                                 <td>{{ $prize->id }}</td>
                                 <td>{{ $prize->title }}</td>
                                 <td>{{ $prize->probability }}</td>
-                                <td>0</td>
+                                <td>{{ $prize->winner_count }}</td>
                                 <td>
                                     <div class="d-flex gap-2">
                                         <a href="{{ route('prizes.edit', [$prize->id]) }}" class="btn btn-primary">Edit</a>
@@ -52,7 +52,7 @@
                         <h3>Simulate</h3>
                     </div>
                     <div class="card-body">
-                        {!! Form::open(['method' => 'POST', 'route' => ['simulate']]) !!}
+                        {!! Form::open(['method' => 'POST', 'route' => 'simulate']) !!}
                         <div class="form-group">
                             {!! Form::label('number_of_prizes', 'Number of Prizes') !!}
                             {!! Form::number('number_of_prizes', 50, ['class' => 'form-control']) !!}
@@ -64,7 +64,7 @@
                     <br>
 
                     <div class="card-body">
-                        {!! Form::open(['method' => 'POST', 'route' => ['reset']]) !!}
+                        {!! Form::open(['method' => 'POST', 'route' => 'reset']) !!}
                         {!! Form::submit('Reset', ['class' => 'btn btn-primary']) !!}
                         {!! Form::close() !!}
                     </div>
@@ -95,8 +95,64 @@
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+    
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
+    <script>
+        var probabilityData = @json($prizes->pluck('probability'));
+        var awardedData = @json($prizes->pluck('winner_count'));
+        var prizeNames = @json($prizes->pluck('title'));
 
+        var probabilityDataWithPercent = probabilityData.map(function(probability) {
+            return probability + '%';
+        });
+
+        var concatenatedData = prizeNames.map(function(name, index) {
+            return name + ': ' + probabilityDataWithPercent[index];
+        });
+
+        var awardedDataWithPercent = awardedData.map(function(winner_count) {
+            return winner_count + '%';
+        });
+
+        var concatenatedWinnerData = prizeNames.map(function(name, index) {
+            return name + ': ' + awardedDataWithPercent[index];
+        });
+        
+        // Probability Chart
+        var probabilityChartCanvas = document.getElementById('probabilityChart');
+        var probabilityChart = new Chart(probabilityChartCanvas, {
+            type: 'pie',
+            data: {
+                labels: concatenatedData,
+                datasets: [{
+                    data: probabilityData,
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9900'],
+                }]
+            },
+            options: {
+                plugins: {
+                    datalabels: {
+                        color: 'white',
+                        formatter: (value, context) => {
+                            return (value * 100).toFixed(2) + '%';
+                        }
+                    }
+                }
+            }
+        });
+
+        // Actual Rewards Chart
+        var awardedChartCanvas = document.getElementById('awardedChart');
+        var awardedChart = new Chart(awardedChartCanvas, {
+            type: 'pie',
+            data: {
+                labels: concatenatedWinnerData,
+                datasets: [{
+                    data: awardedData,
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9900'],
+                }]
+            }
+        });
+    </script>
 @endpush
